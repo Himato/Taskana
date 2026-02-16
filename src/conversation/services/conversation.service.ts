@@ -110,7 +110,7 @@ export class ConversationService {
     this.logger.debug(`Handling audio from ${phoneNumber}: ${duration}s`);
 
     try {
-      // Download audio
+      // Download audio - mediaHandle contains the raw WAMessage needed for download
       const audioBuffer = await this.messaging.downloadMedia({
         type: 'audio',
         mediaHandle,
@@ -121,7 +121,7 @@ export class ConversationService {
         from: phoneNumber,
         fromNumber: phoneNumber,
         timestamp: Date.now(),
-        raw: null,
+        raw: mediaHandle,
       });
 
       // Transcribe
