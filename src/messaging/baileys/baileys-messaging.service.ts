@@ -51,6 +51,7 @@ export class BaileysMessagingService implements IMessagingService, OnModuleInit,
   private readonly allowedNumber: string;
   private readonly MAX_RECONNECT_ATTEMPTS = 10;
   private readonly RECONNECT_BASE_DELAY_MS = 2000;
+  private startupMessageSent = false;
 
   constructor(
     private readonly configService: ConfigService,
@@ -105,6 +106,14 @@ export class BaileysMessagingService implements IMessagingService, OnModuleInit,
         this.connectionState.reconnectAttempts = 0;
         this.updateState('connected');
         this.logger.log('WhatsApp connection established');
+
+        // Send startup message on first connection
+        if (!this.startupMessageSent && this.allowedNumber) {
+          this.startupMessageSent = true;
+          const timestamp = new Date().toLocaleString();
+          await this.sendText(this.allowedNumber, `Taskana started successfully at ${timestamp}`);
+          this.logger.log('Startup notification sent');
+        }
       }
 
       if (connection === 'close') {
