@@ -1,0 +1,22 @@
+{
+  "moduleFileExtensions": ["js", "json", "ts"],
+  "rootDir": ".",
+  "testEnvironment": "node",
+  "testRegex": ".e2e-spec.ts$",
+  "transform": {
+    "^.+\\.(t|j)s$": "ts-jest"
+  },
+  "moduleNameMapper": {
+    "^@messaging/(.*)$": "<rootDir>/../src/messaging/$1",
+    "^@common/(.*)$": "<rootDir>/../src/common/$1",
+    "^@config/(.*)$": "<rootDir>/../src/config/$1",
+    "^@habit/(.*)$": "<rootDir>/../src/habit/$1",
+    "^@task/(.*)$": "<rootDir>/../src/task/$1",
+    "^@reminder/(.*)$": "<rootDir>/../src/reminder/$1",
+    "^@prayer-time/(.*)$": "<rootDir>/../src/prayer-time/$1",
+    "^@openai/(.*)$": "<rootDir>/../src/openai/$1",
+    "^@conversation/(.*)$": "<rootDir>/../src/conversation/$1",
+    "^@persistence/(.*)$": "<rootDir>/../src/persistence/$1",
+    "^@image/(.*)$": "<rootDir>/../src/image/$1"
+  }
+}
