@@ -1,0 +1,316 @@
+{
+  "description": "Intent classification test corpus for Taskana",
+  "version": "1.0.0",
+  "entries": [
+    {
+      "message": "مرحبا",
+      "expectedIntent": "greeting",
+      "language": "ar"
+    },
+    {
+      "message": "أهلا",
+      "expectedIntent": "greeting",
+      "language": "ar"
+    },
+    {
+      "message": "hello",
+      "expectedIntent": "greeting",
+      "language": "en"
+    },
+    {
+      "message": "hi there",
+      "expectedIntent": "greeting",
+      "language": "en"
+    },
+    {
+      "message": "مساعدة",
+      "expectedIntent": "help",
+      "language": "ar"
+    },
+    {
+      "message": "help",
+      "expectedIntent": "help",
+      "language": "en"
+    },
+    {
+      "message": "ايه اللي تقدر تعمله",
+      "expectedIntent": "help",
+      "language": "ar"
+    },
+    {
+      "message": "خلصت",
+      "expectedIntent": "habit_done",
+      "language": "ar"
+    },
+    {
+      "message": "تم",
+      "expectedIntent": "habit_done",
+      "language": "ar"
+    },
+    {
+      "message": "done",
+      "expectedIntent": "habit_done",
+      "language": "en"
+    },
+    {
+      "message": "✅",
+      "expectedIntent": "habit_done",
+      "language": "emoji"
+    },
+    {
+      "message": "متعملتش",
+      "expectedIntent": "habit_skipped",
+      "language": "ar"
+    },
+    {
+      "message": "skip",
+      "expectedIntent": "habit_skipped",
+      "language": "en"
+    },
+    {
+      "message": "مقدرتش أعملها",
+      "expectedIntent": "habit_skipped",
+      "language": "ar"
+    },
+    {
+      "message": "عاداتي",
+      "expectedIntent": "habit_list",
+      "language": "ar"
+    },
+    {
+      "message": "habits",
+      "expectedIntent": "habit_list",
+      "language": "en"
+    },
+    {
+      "message": "ضيف تاسك اشتري خضار بعد الضهر",
+      "expectedIntent": "task_create",
+      "expectedEntities": {
+        "taskTitle": "اشتري خضار",
+        "timeSlot": "after_dhuhr"
+      },
+      "language": "ar"
+    },
+    {
+      "message": "add task buy groceries after dhuhr",
+      "expectedIntent": "task_create",
+      "expectedEntities": {
+        "taskTitle": "buy groceries",
+        "timeSlot": "after_dhuhr"
+      },
+      "language": "en"
+    },
+    {
+      "message": "مهمة جديدة: اتصل بالدكتور",
+      "expectedIntent": "task_create",
+      "expectedEntities": {
+        "taskTitle": "اتصل بالدكتور"
+      },
+      "language": "ar"
+    },
+    {
+      "message": "خلصت 1",
+      "expectedIntent": "task_complete",
+      "expectedEntities": {
+        "taskId": "1"
+      },
+      "language": "ar"
+    },
+    {
+      "message": "done 2",
+      "expectedIntent": "task_complete",
+      "expectedEntities": {
+        "taskId": "2"
+      },
+      "language": "en"
+    },
+    {
+      "message": "تم المهمة 3",
+      "expectedIntent": "task_complete",
+      "expectedEntities": {
+        "taskId": "3"
+      },
+      "language": "ar"
+    },
+    {
+      "message": "نقل 2 لبكرة",
+      "expectedIntent": "task_shift",
+      "expectedEntities": {
+        "taskId": "2",
+        "rawDateExpression": "بكرة"
+      },
+      "language": "ar"
+    },
+    {
+      "message": "shift task 3 to tomorrow",
+      "expectedIntent": "task_shift",
+      "expectedEntities": {
+        "taskId": "3",
+        "rawDateExpression": "tomorrow"
+      },
+      "language": "en"
+    },
+    {
+      "message": "أجل المهمة 1 للخميس",
+      "expectedIntent": "task_shift",
+      "expectedEntities": {
+        "taskId": "1",
+        "rawDateExpression": "الخميس"
+      },
+      "language": "ar"
+    },
+    {
+      "message": "move 2 to thursday",
+      "expectedIntent": "task_shift",
+      "expectedEntities": {
+        "taskId": "2",
+        "rawDateExpression": "thursday"
+      },
+      "language": "en"
+    },
+    {
+      "message": "احذف المهمة 1",
+      "expectedIntent": "task_delete",
+      "expectedEntities": {
+        "taskId": "1"
+      },
+      "language": "ar"
+    },
+    {
+      "message": "delete task 2",
+      "expectedIntent": "task_delete",
+      "expectedEntities": {
+        "taskId": "2"
+      },
+      "language": "en"
+    },
+    {
+      "message": "مهامي",
+      "expectedIntent": "task_list",
+      "language": "ar"
+    },
+    {
+      "message": "tasks",
+      "expectedIntent": "task_list",
+      "language": "en"
+    },
+    {
+      "message": "المهام",
+      "expectedIntent": "task_list",
+      "language": "ar"
+    },
+    {
+      "message": "ملخص",
+      "expectedIntent": "daily_summary",
+      "language": "ar"
+    },
+    {
+      "message": "summary",
+      "expectedIntent": "daily_summary",
+      "language": "en"
+    },
+    {
+      "message": "ملخص اليوم",
+      "expectedIntent": "daily_summary",
+      "language": "ar"
+    },
+    {
+      "message": "أيوه",
+      "expectedIntent": "confirmation",
+      "language": "ar"
+    },
+    {
+      "message": "نعم",
+      "expectedIntent": "confirmation",
+      "language": "ar"
+    },
+    {
+      "message": "yes",
+      "expectedIntent": "confirmation",
+      "language": "en"
+    },
+    {
+      "message": "ok",
+      "expectedIntent": "confirmation",
+      "language": "en"
+    },
+    {
+      "message": "لا",
+      "expectedIntent": "rejection",
+      "language": "ar"
+    },
+    {
+      "message": "لأ",
+      "expectedIntent": "rejection",
+      "language": "ar"
+    },
+    {
+      "message": "no",
+      "expectedIntent": "rejection",
+      "language": "en"
+    },
+    {
+      "message": "cancel",
+      "expectedIntent": "rejection",
+      "language": "en"
+    },
+    {
+      "message": "1",
+      "expectedIntent": "image_tag_response",
+      "expectedEntities": {
+        "selectedOption": 1
+      },
+      "context": "awaiting_image_tag",
+      "language": "number"
+    },
+    {
+      "message": "2",
+      "expectedIntent": "image_tag_response",
+      "expectedEntities": {
+        "selectedOption": 2
+      },
+      "context": "awaiting_image_tag",
+      "language": "number"
+    },
+    {
+      "message": "asdfghjkl",
+      "expectedIntent": "unclear",
+      "language": "gibberish"
+    },
+    {
+      "message": "ضيف تاسك قراءة القرآن بعد الفجر",
+      "expectedIntent": "task_create",
+      "expectedEntities": {
+        "taskTitle": "قراءة القرآن",
+        "timeSlot": "after_fajr"
+      },
+      "language": "ar"
+    },
+    {
+      "message": "add a task to call mom before asr",
+      "expectedIntent": "task_create",
+      "expectedEntities": {
+        "taskTitle": "call mom",
+        "timeSlot": "before_asr"
+      },
+      "language": "en"
+    },
+    {
+      "message": "skip 1 because I'm sick",
+      "expectedIntent": "task_skip",
+      "expectedEntities": {
+        "taskId": "1",
+        "justification": "I'm sick"
+      },
+      "language": "en"
+    },
+    {
+      "message": "متعملتش عشان تعبان",
+      "expectedIntent": "habit_skipped",
+      "expectedEntities": {
+        "justification": "تعبان"
+      },
+      "language": "ar"
+    }
+  ]
+}

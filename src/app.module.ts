@@ -13,6 +13,7 @@ import {
 import { IMessagingService } from './messaging/interfaces';
 import { MESSAGING_SERVICE, MSG_EVENTS } from './messaging/messaging.constants';
 import { MessagingModule } from './messaging/messaging.module';
+import { OpenAiModule } from './openai/openai.module';
 import { PersistenceModule } from './persistence/persistence.module';
 import { PrayerTimeModule } from './prayer-time/prayer-time.module';
 import { ReminderModule } from './reminder/reminder.module';
@@ -69,6 +70,7 @@ class EchoHandler {
     PersistenceModule,
     PrayerTimeModule,
     ReminderModule,
+    OpenAiModule,
   ],
   controllers: [],
   providers: [EchoHandler],
