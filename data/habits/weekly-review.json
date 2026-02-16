@@ -1,0 +1,16 @@
+{
+  "id": "weekly-review",
+  "name": "Weekly Review",
+  "description": "Review week's accomplishments and plan next week",
+  "schedule": {
+    "days": ["fri"],
+    "islamicTimeSlot": "after_asr",
+    "durationMinutes": 60
+  },
+  "reminders": {
+    "atStart": true,
+    "beforeEnd": true,
+    "beforeEndMinutes": 15
+  },
+  "requiresJustification": true
+}

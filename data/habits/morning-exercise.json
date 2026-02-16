@@ -1,0 +1,16 @@
+{
+  "id": "morning-exercise",
+  "name": "Morning Exercise",
+  "description": "Light stretching and workout routine",
+  "schedule": {
+    "days": ["sun", "mon", "tue", "wed", "thu"],
+    "islamicTimeSlot": "before_dhuhr",
+    "durationMinutes": 45
+  },
+  "reminders": {
+    "atStart": true,
+    "beforeEnd": true,
+    "beforeEndMinutes": 10
+  },
+  "requiresJustification": true
+}

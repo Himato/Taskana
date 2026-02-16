@@ -4,6 +4,7 @@ import { EventEmitterModule, OnEvent } from '@nestjs/event-emitter';
 import { ScheduleModule } from '@nestjs/schedule';
 
 import configuration from './config/configuration';
+import { HabitModule } from './habit/habit.module';
 import {
   AudioMessageReceivedEvent,
   ImageMessageReceivedEvent,
@@ -12,6 +13,7 @@ import {
 import { IMessagingService } from './messaging/interfaces';
 import { MESSAGING_SERVICE, MSG_EVENTS } from './messaging/messaging.constants';
 import { MessagingModule } from './messaging/messaging.module';
+import { PersistenceModule } from './persistence/persistence.module';
 
 /**
  * Temporary echo handler for Phase 1 validation.
@@ -61,6 +63,8 @@ class EchoHandler {
     EventEmitterModule.forRoot(),
     ScheduleModule.forRoot(),
     MessagingModule,
+    HabitModule,
+    PersistenceModule,
   ],
   controllers: [],
   providers: [EchoHandler],

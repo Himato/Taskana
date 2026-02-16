@@ -11,6 +11,7 @@ import makeWASocket, {
   WASocket,
 } from '@whiskeysockets/baileys';
 import pino from 'pino';
+import * as qrcode from 'qrcode-terminal';
 
 import { ButtonOption, ListSection } from '../dto';
 import {
@@ -85,7 +86,6 @@ export class BaileysMessagingService implements IMessagingService, OnModuleInit,
         creds: state.creds,
         keys: makeCacheableSignalKeyStore(state.keys, pino({ level: 'silent' })),
       },
-      printQRInTerminal: true,
       logger: pino({ level: nodeEnv === 'production' ? 'warn' : 'debug' }),
       generateHighQualityLinkPreview: false,
       markOnlineOnConnect: false,
@@ -97,7 +97,8 @@ export class BaileysMessagingService implements IMessagingService, OnModuleInit,
 
       if (qr) {
         this.updateState('qr_ready', qr);
-        this.logger.log('QR code ready — scan with WhatsApp');
+        this.logger.log('QR code ready — scan with WhatsApp:');
+        qrcode.generate(qr, { small: true });
       }
 
       if (connection === 'open') {

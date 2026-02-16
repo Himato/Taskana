@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
 
+import { PersistenceService } from './persistence.service';
+
 /**
  * Persistence Module
  *
@@ -7,7 +9,7 @@ import { Module } from '@nestjs/common';
  */
 @Module({
   imports: [],
-  providers: [],
-  exports: [],
+  providers: [PersistenceService],
+  exports: [PersistenceService],
 })
 export class PersistenceModule {}

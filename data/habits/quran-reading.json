@@ -1,0 +1,16 @@
+{
+  "id": "quran-reading",
+  "name": "Quran Reading",
+  "description": "Daily Quran recitation - minimum one page",
+  "schedule": {
+    "days": ["sun", "mon", "tue", "wed", "thu", "fri", "sat"],
+    "islamicTimeSlot": "after_fajr",
+    "durationMinutes": 30
+  },
+  "reminders": {
+    "atStart": true,
+    "beforeEnd": true,
+    "beforeEndMinutes": 5
+  },
+  "requiresJustification": true
+}

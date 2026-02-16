@@ -1,0 +1,16 @@
+{
+  "id": "evening-adhkar",
+  "name": "Evening Adhkar",
+  "description": "Evening remembrance and supplications",
+  "schedule": {
+    "days": ["sun", "mon", "tue", "wed", "thu", "fri", "sat"],
+    "islamicTimeSlot": "after_maghrib",
+    "durationMinutes": 15
+  },
+  "reminders": {
+    "atStart": true,
+    "beforeEnd": false,
+    "beforeEndMinutes": 5
+  },
+  "requiresJustification": false
+}

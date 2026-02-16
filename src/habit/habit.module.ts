@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
 
+import { HabitService } from './habit.service';
+
 /**
  * Habit Module
  *
@@ -7,7 +9,7 @@ import { Module } from '@nestjs/common';
  */
 @Module({
   imports: [],
-  providers: [],
-  exports: [],
+  providers: [HabitService],
+  exports: [HabitService],
 })
 export class HabitModule {}
