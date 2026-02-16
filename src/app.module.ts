@@ -14,6 +14,8 @@ import { IMessagingService } from './messaging/interfaces';
 import { MESSAGING_SERVICE, MSG_EVENTS } from './messaging/messaging.constants';
 import { MessagingModule } from './messaging/messaging.module';
 import { PersistenceModule } from './persistence/persistence.module';
+import { PrayerTimeModule } from './prayer-time/prayer-time.module';
+import { ReminderModule } from './reminder/reminder.module';
 
 /**
  * Temporary echo handler for Phase 1 validation.
@@ -65,6 +67,8 @@ class EchoHandler {
     MessagingModule,
     HabitModule,
     PersistenceModule,
+    PrayerTimeModule,
+    ReminderModule,
   ],
   controllers: [],
   providers: [EchoHandler],

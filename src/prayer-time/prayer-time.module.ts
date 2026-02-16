@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
 
+import { PrayerTimeService } from './prayer-time.service';
+
 /**
  * Prayer Time Module
  *
@@ -7,7 +9,7 @@ import { Module } from '@nestjs/common';
  */
 @Module({
   imports: [],
-  providers: [],
-  exports: [],
+  providers: [PrayerTimeService],
+  exports: [PrayerTimeService],
 })
 export class PrayerTimeModule {}
