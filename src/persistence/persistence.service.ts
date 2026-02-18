@@ -222,6 +222,26 @@ export class PersistenceService {
   }
 
   /**
+   * Delete a task from a given date.
+   */
+  async deleteTask(date: string, taskId: string): Promise<boolean> {
+    const log = await this.loadDay(date);
+    const taskIndex = log.tasks.findIndex((t) => t.id === taskId);
+
+    if (taskIndex === -1) {
+      this.logger.warn(`Task ${taskId} not found in ${date} for deletion`);
+      return false;
+    }
+
+    const task = log.tasks[taskIndex];
+    log.tasks.splice(taskIndex, 1);
+    await this.saveDay(date, log);
+
+    this.logger.log(`Deleted task ${taskId} from ${date}: "${task.title}"`);
+    return true;
+  }
+
+  /**
    * Add an image path to a habit or task.
    */
   async addImage(

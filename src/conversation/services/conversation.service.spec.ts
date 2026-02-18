@@ -14,6 +14,7 @@ import { ISttService, STT_SERVICE } from '../../openai/interfaces/stt-service.in
 import { DailyLog } from '../../persistence/daily-log.schema';
 import { PersistenceService } from '../../persistence/persistence.service';
 import { PrayerTimeService } from '../../prayer-time/prayer-time.service';
+import { TaskService } from '../../task/task.service';
 
 import { ConversationService } from './conversation.service';
 import { StateService } from './state.service';
@@ -27,6 +28,7 @@ describe('ConversationService', () => {
   let mockHabitService: jest.Mocked<HabitService>;
   let mockPersistenceService: jest.Mocked<PersistenceService>;
   let mockPrayerTimeService: jest.Mocked<PrayerTimeService>;
+  let mockTaskService: jest.Mocked<TaskService>;
 
   const mockHabit: Habit = {
     id: 'quran-reading',
@@ -138,6 +140,50 @@ describe('ConversationService', () => {
       clearCache: jest.fn(),
     } as unknown as jest.Mocked<PrayerTimeService>;
 
+    mockTaskService = {
+      create: jest.fn().mockResolvedValue({
+        success: true,
+        task: {
+          id: 't-001',
+          title: 'اشتري خضار',
+          islamicTimeSlot: 'after_dhuhr',
+          status: 'pending',
+          completedAt: null,
+          createdAt: new Date().toISOString(),
+          images: [],
+        },
+        message: 'تم إضافة مهمة: "اشتري خضار"',
+      }),
+      complete: jest.fn().mockResolvedValue({
+        success: true,
+        task: { id: 't-001', title: 'اشتري خضار', status: 'done' },
+        message: '✅ تم إنهاء: "اشتري خضار"',
+      }),
+      skip: jest.fn().mockResolvedValue({
+        success: true,
+        task: { id: 't-001', title: 'اشتري خضار', status: 'skipped' },
+        message: '⏭️ تم تخطي: "اشتري خضار"',
+      }),
+      shift: jest.fn().mockResolvedValue({
+        success: true,
+        task: { id: 't-001', title: 'اشتري خضار' },
+        message: '✅ تم نقل "اشتري خضار" لـ بكرة',
+      }),
+      update: jest.fn().mockResolvedValue({
+        success: true,
+        task: { id: 't-001', title: 'عنوان جديد' },
+        message: 'تم تحديث المهمة "عنوان جديد"',
+      }),
+      delete: jest.fn().mockResolvedValue({
+        success: true,
+        task: { id: 't-001', title: 'اشتري خضار' },
+        message: '🗑️ تم حذف: "اشتري خضار"',
+      }),
+      listForDay: jest.fn().mockResolvedValue([]),
+      getBySlot: jest.fn().mockResolvedValue(new Map()),
+      getById: jest.fn().mockResolvedValue(null),
+    } as unknown as jest.Mocked<TaskService>;
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ConversationService,
@@ -148,6 +194,7 @@ describe('ConversationService', () => {
         { provide: HabitService, useValue: mockHabitService },
         { provide: PersistenceService, useValue: mockPersistenceService },
         { provide: PrayerTimeService, useValue: mockPrayerTimeService },
+        { provide: TaskService, useValue: mockTaskService },
       ],
     }).compile();
 
@@ -417,6 +464,121 @@ describe('ConversationService', () => {
       expect(context.pendingState).toBe('awaiting_justification');
       expect(context.pendingReference).toBe('quran-reading');
       expect(context.pendingAction).toBe('skip habit');
+    });
+  });
+
+  describe('task handlers', () => {
+    it('should create task via task_create intent', async () => {
+      mockAiService.classify.mockResolvedValue(
+        createMockClassified('task_create', 0.9, {
+          taskTitle: 'اشتري خضار',
+          timeSlot: 'after_dhuhr',
+        }),
+      );
+
+      await service.handleText('201234567890', 'اضف مهمة اشتري خضار بعد الظهر');
+
+      expect(mockTaskService.create).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({ taskTitle: 'اشتري خضار' }),
+      );
+      expect(mockMessaging.sendText).toHaveBeenCalledWith(
+        '201234567890',
+        expect.stringContaining('اشتري خضار'),
+      );
+    });
+
+    it('should complete task via task_complete intent', async () => {
+      mockAiService.classify.mockResolvedValue(
+        createMockClassified('task_complete', 0.9, { taskId: '1' }),
+      );
+
+      await service.handleText('201234567890', 'خلصت مهمة 1');
+
+      expect(mockTaskService.complete).toHaveBeenCalledWith(expect.any(String), '1');
+    });
+
+    it('should skip task via task_skip intent', async () => {
+      mockAiService.classify.mockResolvedValue(
+        createMockClassified('task_skip', 0.9, { taskId: '1' }),
+      );
+
+      await service.handleText('201234567890', 'تخطي مهمة 1');
+
+      expect(mockTaskService.skip).toHaveBeenCalledWith(expect.any(String), '1', undefined);
+    });
+
+    it('should shift task with target date', async () => {
+      mockAiService.classify.mockResolvedValue(
+        createMockClassified('task_shift', 0.9, {
+          taskId: '1',
+          targetDate: '2026-02-17',
+        }),
+      );
+
+      await service.handleText('201234567890', 'انقل مهمة 1 لبكرة');
+
+      expect(mockTaskService.shift).toHaveBeenCalledWith(
+        expect.any(String),
+        '1',
+        '2026-02-17',
+        undefined,
+      );
+    });
+
+    it('should ask for shift date when not provided', async () => {
+      mockAiService.classify.mockResolvedValue(
+        createMockClassified('task_shift', 0.9, { taskId: '1' }),
+      );
+
+      await service.handleText('201234567890', 'انقل مهمة 1');
+
+      expect(mockMessaging.sendText).toHaveBeenCalledWith('201234567890', AR.TASK_ASK_SHIFT_DATE);
+
+      const state = stateService.getState('201234567890');
+      expect(state.pendingState).toBe('awaiting_shift_date');
+      expect(state.pendingReference).toBe('1');
+    });
+
+    it('should complete shift when date is provided in pending state', async () => {
+      stateService.setState('201234567890', {
+        pendingState: 'awaiting_shift_date',
+        pendingReference: '1',
+        pendingAction: 'shift task',
+      });
+
+      mockAiService.resolveRelativeDate.mockReturnValue('2026-02-17');
+
+      await service.handleText('201234567890', 'بكرة');
+
+      expect(mockTaskService.shift).toHaveBeenCalledWith(expect.any(String), '1', '2026-02-17');
+    });
+
+    it('should delete task via task_delete intent', async () => {
+      mockAiService.classify.mockResolvedValue(
+        createMockClassified('task_delete', 0.9, { taskId: '1' }),
+      );
+
+      await service.handleText('201234567890', 'احذف مهمة 1');
+
+      expect(mockTaskService.delete).toHaveBeenCalledWith(expect.any(String), '1');
+    });
+
+    it('should handle task operation errors gracefully', async () => {
+      mockTaskService.create.mockResolvedValue({
+        success: false,
+        message: 'لازم تحدد عنوان المهمة.',
+        error: 'Missing task title',
+      });
+
+      mockAiService.classify.mockResolvedValue(createMockClassified('task_create', 0.9, {}));
+
+      await service.handleText('201234567890', 'اضف مهمة');
+
+      expect(mockMessaging.sendText).toHaveBeenCalledWith(
+        '201234567890',
+        'لازم تحدد عنوان المهمة.',
+      );
     });
   });
 });

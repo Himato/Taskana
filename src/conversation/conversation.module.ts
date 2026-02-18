@@ -5,6 +5,7 @@ import { MessagingModule } from '../messaging/messaging.module';
 import { OpenAiModule } from '../openai/openai.module';
 import { PersistenceModule } from '../persistence/persistence.module';
 import { PrayerTimeModule } from '../prayer-time/prayer-time.module';
+import { TaskModule } from '../task/task.module';
 
 import { ConversationListenerService, ConversationService, StateService } from './services';
 
@@ -15,7 +16,14 @@ import { ConversationListenerService, ConversationService, StateService } from '
  * to the correct handler based on intent classification.
  */
 @Module({
-  imports: [MessagingModule, OpenAiModule, HabitModule, PersistenceModule, PrayerTimeModule],
+  imports: [
+    MessagingModule,
+    OpenAiModule,
+    HabitModule,
+    PersistenceModule,
+    PrayerTimeModule,
+    TaskModule,
+  ],
   providers: [StateService, ConversationService, ConversationListenerService],
   exports: [ConversationService, StateService],
 })

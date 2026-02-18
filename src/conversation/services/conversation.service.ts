@@ -17,6 +17,7 @@ import {
 import { ISttService, STT_SERVICE } from '../../openai/interfaces/stt-service.interface';
 import { PersistenceService } from '../../persistence/persistence.service';
 import { PrayerTimeService } from '../../prayer-time/prayer-time.service';
+import { TaskService } from '../../task/task.service';
 
 import { StateService } from './state.service';
 
@@ -53,6 +54,7 @@ export class ConversationService {
     private readonly habitService: HabitService,
     private readonly persistenceService: PersistenceService,
     private readonly prayerTimeService: PrayerTimeService,
+    private readonly taskService: TaskService,
   ) {
     this.handlers = this.buildHandlerMap();
   }
@@ -69,6 +71,14 @@ export class ConversationService {
 
       // Build context
       const context = await this.buildContext(phoneNumber);
+
+      // Check for pending states that need special handling
+      const pendingResponse = await this.handlePendingState(phoneNumber, text, context);
+      if (pendingResponse) {
+        await this.messaging.sendText(phoneNumber, pendingResponse);
+        this.stateService.addMessage(phoneNumber, 'assistant', pendingResponse);
+        return;
+      }
 
       // Classify intent
       const classified = await this.aiService.classify(text, context);
@@ -209,13 +219,13 @@ export class ConversationService {
     map.set('habit_list', this.handleHabitList.bind(this));
     map.set('habit_status', this.handleHabitList.bind(this));
 
-    // Task operations (stubs for Phase 6)
-    map.set('task_create', this.handleNotImplemented.bind(this));
-    map.set('task_complete', this.handleNotImplemented.bind(this));
-    map.set('task_skip', this.handleNotImplemented.bind(this));
-    map.set('task_shift', this.handleNotImplemented.bind(this));
-    map.set('task_update', this.handleNotImplemented.bind(this));
-    map.set('task_delete', this.handleNotImplemented.bind(this));
+    // Task operations
+    map.set('task_create', this.handleTaskCreate.bind(this));
+    map.set('task_complete', this.handleTaskComplete.bind(this));
+    map.set('task_skip', this.handleTaskSkip.bind(this));
+    map.set('task_shift', this.handleTaskShift.bind(this));
+    map.set('task_update', this.handleTaskUpdate.bind(this));
+    map.set('task_delete', this.handleTaskDelete.bind(this));
     map.set('task_list', this.handleDailySummary.bind(this));
 
     // Summaries
@@ -540,6 +550,126 @@ export class ConversationService {
   }
 
   // ────────────────────────────────────────────────────────────
+  // Task Handlers
+  // ────────────────────────────────────────────────────────────
+
+  private async handleTaskCreate(
+    _phoneNumber: string,
+    classified: ClassifiedIntent,
+    context: ConversationContext,
+  ): Promise<string> {
+    const result = await this.taskService.create(context.currentDate, classified.entities);
+    return result.message;
+  }
+
+  private async handleTaskComplete(
+    _phoneNumber: string,
+    classified: ClassifiedIntent,
+    context: ConversationContext,
+  ): Promise<string> {
+    const { entities } = classified;
+
+    if (!entities.taskId) {
+      return 'محتاج تقولي رقم المهمة. مثلاً: "خلصت 1"';
+    }
+
+    const result = await this.taskService.complete(context.currentDate, entities.taskId);
+    return result.message;
+  }
+
+  private async handleTaskSkip(
+    _phoneNumber: string,
+    classified: ClassifiedIntent,
+    context: ConversationContext,
+  ): Promise<string> {
+    const { entities } = classified;
+
+    if (!entities.taskId) {
+      return 'محتاج تقولي رقم المهمة. مثلاً: "تخطي 1"';
+    }
+
+    const result = await this.taskService.skip(
+      context.currentDate,
+      entities.taskId,
+      entities.justification,
+    );
+    return result.message;
+  }
+
+  private async handleTaskShift(
+    phoneNumber: string,
+    classified: ClassifiedIntent,
+    context: ConversationContext,
+  ): Promise<string> {
+    const { entities } = classified;
+
+    if (!entities.taskId) {
+      return 'محتاج تقولي رقم المهمة. مثلاً: "نقل 1 لبكرة"';
+    }
+
+    // Check if we have a target date
+    let targetDate: string | undefined = entities.targetDate;
+
+    if (!targetDate && entities.rawDateExpression) {
+      const resolved = this.aiService.resolveRelativeDate(
+        entities.rawDateExpression,
+        context.currentDate,
+      );
+      if (resolved) {
+        targetDate = resolved;
+      }
+    }
+
+    if (!targetDate) {
+      // Ask for the date
+      this.stateService.setState(phoneNumber, {
+        pendingState: 'awaiting_shift_date',
+        pendingReference: entities.taskId,
+        pendingAction: 'shift task',
+      });
+      return AR.TASK_ASK_SHIFT_DATE;
+    }
+
+    const result = await this.taskService.shift(
+      context.currentDate,
+      entities.taskId,
+      targetDate,
+      entities.justification,
+    );
+    return result.message;
+  }
+
+  private async handleTaskUpdate(
+    _phoneNumber: string,
+    classified: ClassifiedIntent,
+    context: ConversationContext,
+  ): Promise<string> {
+    const { entities } = classified;
+
+    if (!entities.taskId) {
+      return 'محتاج تقولي رقم المهمة اللي عايز تعدلها.';
+    }
+
+    const result = await this.taskService.update(context.currentDate, entities.taskId, entities);
+    return result.message;
+  }
+
+  private async handleTaskDelete(
+    _phoneNumber: string,
+    classified: ClassifiedIntent,
+    context: ConversationContext,
+  ): Promise<string> {
+    const { entities } = classified;
+
+    if (!entities.taskId) {
+      return 'محتاج تقولي رقم المهمة. مثلاً: "احذف 1"';
+    }
+
+    const result = await this.taskService.delete(context.currentDate, entities.taskId);
+    return result.message;
+  }
+
+  // ────────────────────────────────────────────────────────────
   // Helper Methods
   // ────────────────────────────────────────────────────────────
 
@@ -576,9 +706,12 @@ export class ConversationService {
         return 'مش فاهم التاريخ ده. ممكن تقول بكرة، أو الخميس، أو تاريخ معين؟';
       }
 
-      // TODO: Execute shift in Phase 6
+      // Execute shift
+      const taskId = state.pendingReference;
       this.stateService.clearPendingState(phoneNumber);
-      return `تم نقل المهمة لـ ${resolved}.`;
+
+      const result = await this.taskService.shift(context.currentDate, taskId, resolved);
+      return result.message;
     }
 
     return null;
