@@ -182,6 +182,8 @@ describe('ConversationService', () => {
       listForDay: jest.fn().mockResolvedValue([]),
       getBySlot: jest.fn().mockResolvedValue(new Map()),
       getById: jest.fn().mockResolvedValue(null),
+      findSimilarInWeek: jest.fn().mockResolvedValue(null),
+      formatDate: jest.fn().mockReturnValue('بكرة'),
     } as unknown as jest.Mocked<TaskService>;
 
     const module: TestingModule = await Test.createTestingModule({
@@ -579,6 +581,71 @@ describe('ConversationService', () => {
         '201234567890',
         'لازم تحدد عنوان المهمة.',
       );
+    });
+
+    it('should ask for confirmation when duplicate task found', async () => {
+      mockTaskService.findSimilarInWeek.mockResolvedValue({
+        task: {
+          id: 't-001',
+          title: 'اشتري خضار',
+          islamicTimeSlot: 'after_dhuhr',
+          status: 'pending',
+          completedAt: null,
+          createdAt: new Date().toISOString(),
+          images: [],
+        },
+        date: '2026-02-19',
+        similarity: 1.0,
+      });
+      mockTaskService.formatDate.mockReturnValue('بكرة');
+
+      mockAiService.classify.mockResolvedValue(
+        createMockClassified('task_create', 0.9, { taskTitle: 'اشتري خضار' }),
+      );
+
+      await service.handleText('201234567890', 'اضف مهمة اشتري خضار');
+
+      expect(mockMessaging.sendText).toHaveBeenCalledWith(
+        '201234567890',
+        expect.stringContaining('عندك مهمة مشابهة'),
+      );
+
+      const state = stateService.getState('201234567890');
+      expect(state.pendingState).toBe('awaiting_duplicate_confirmation');
+    });
+
+    it('should create task when user confirms duplicate', async () => {
+      stateService.setState('201234567890', {
+        pendingState: 'awaiting_duplicate_confirmation',
+        pendingReference: JSON.stringify({ taskTitle: 'اشتري خضار', timeSlot: 'after_dhuhr' }),
+        pendingAction: 'إضافة مهمة "اشتري خضار"',
+      });
+
+      await service.handleText('201234567890', 'نعم');
+
+      expect(mockTaskService.create).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({ taskTitle: 'اشتري خضار' }),
+      );
+    });
+
+    it('should cancel task creation when user rejects duplicate', async () => {
+      stateService.setState('201234567890', {
+        pendingState: 'awaiting_duplicate_confirmation',
+        pendingReference: JSON.stringify({ taskTitle: 'اشتري خضار' }),
+        pendingAction: 'إضافة مهمة',
+      });
+
+      await service.handleText('201234567890', 'لا');
+
+      expect(mockTaskService.create).not.toHaveBeenCalled();
+      expect(mockMessaging.sendText).toHaveBeenCalledWith(
+        '201234567890',
+        AR.TASK_DUPLICATE_CANCELLED,
+      );
+
+      const state = stateService.getState('201234567890');
+      expect(state.pendingState).toBe('idle');
     });
   });
 });

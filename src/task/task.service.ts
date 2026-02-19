@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { format, isBefore, startOfDay } from 'date-fns';
+import { addDays, format, isBefore, startOfDay, subDays } from 'date-fns';
 
 import { IslamicTimeSlot } from '../common/types/islamic-time-slot';
 import { ExtractedEntities } from '../openai/interfaces';
@@ -14,6 +14,15 @@ export interface TaskOperationResult {
   task?: TaskEntry;
   message: string;
   error?: string;
+}
+
+/**
+ * Result of a similar task search.
+ */
+export interface SimilarTaskResult {
+  task: TaskEntry;
+  date: string;
+  similarity: number;
 }
 
 /**
@@ -347,6 +356,88 @@ export class TaskService {
   }
 
   /**
+   * Find similar tasks within a week (3 days before and 3 days after).
+   * Returns the most similar task if found.
+   */
+  async findSimilarInWeek(
+    currentDate: string,
+    taskTitle: string,
+  ): Promise<SimilarTaskResult | null> {
+    const baseDate = new Date(currentDate);
+    const results: SimilarTaskResult[] = [];
+
+    // Check 3 days before and 3 days after (7 days total)
+    for (let i = -3; i <= 3; i++) {
+      const checkDate = i === 0 ? baseDate : i > 0 ? addDays(baseDate, i) : subDays(baseDate, -i);
+      const dateStr = format(checkDate, 'yyyy-MM-dd');
+
+      try {
+        const dayLog = await this.persistenceService.getDay(dateStr);
+
+        for (const task of dayLog.tasks) {
+          // Skip shifted or completed tasks
+          if (task.status === 'shifted' || task.status === 'done') {
+            continue;
+          }
+
+          const similarity = this.calculateSimilarity(taskTitle, task.title);
+
+          if (similarity >= 0.7) {
+            results.push({
+              task,
+              date: dateStr,
+              similarity,
+            });
+          }
+        }
+      } catch {
+        // Day file doesn't exist, skip
+        continue;
+      }
+    }
+
+    if (results.length === 0) {
+      return null;
+    }
+
+    // Return the most similar one
+    results.sort((a, b) => b.similarity - a.similarity);
+    return results[0];
+  }
+
+  /**
+   * Calculate similarity between two strings (Jaccard-like similarity).
+   * Returns a value between 0 and 1.
+   */
+  private calculateSimilarity(str1: string, str2: string): number {
+    // Normalize strings
+    const normalize = (s: string) =>
+      s
+        .toLowerCase()
+        .replace(/[^\u0600-\u06FFa-z0-9\s]/g, '') // Keep Arabic, Latin letters, numbers, spaces
+        .split(/\s+/)
+        .filter((w) => w.length > 1); // Remove single char words
+
+    const words1 = new Set(normalize(str1));
+    const words2 = new Set(normalize(str2));
+
+    if (words1.size === 0 || words2.size === 0) {
+      return 0;
+    }
+
+    // Calculate Jaccard similarity
+    let intersection = 0;
+    for (const word of words1) {
+      if (words2.has(word)) {
+        intersection++;
+      }
+    }
+
+    const union = words1.size + words2.size - intersection;
+    return intersection / union;
+  }
+
+  /**
    * Normalize task ID to standard format (t-001).
    * Handles inputs like "1", "t-1", "001", "t-001".
    */
@@ -367,7 +458,7 @@ export class TaskService {
   /**
    * Format date for display in Arabic.
    */
-  private formatDate(dateStr: string): string {
+  formatDate(dateStr: string): string {
     const date = new Date(dateStr);
     const today = startOfDay(new Date());
     const tomorrow = new Date(today);

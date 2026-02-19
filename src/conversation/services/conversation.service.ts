@@ -351,6 +351,20 @@ export class ConversationService {
   ): Promise<string> {
     const state = this.stateService.getState(phoneNumber);
 
+    if (state.pendingState === 'awaiting_duplicate_confirmation' && state.pendingReference) {
+      // Handle duplicate task confirmation
+      try {
+        const entities = JSON.parse(state.pendingReference) as ExtractedEntities;
+        this.stateService.clearPendingState(phoneNumber);
+
+        const result = await this.taskService.create(context.currentDate, entities);
+        return result.message;
+      } catch {
+        this.stateService.clearPendingState(phoneNumber);
+        return AR.ERROR_GENERIC;
+      }
+    }
+
     if (state.pendingState !== 'awaiting_confirmation' || !state.pendingReference) {
       // No pending action
       return AR.UNKNOWN_INTENT;
@@ -373,6 +387,11 @@ export class ConversationService {
 
   private async handleRejection(phoneNumber: string): Promise<string> {
     const state = this.stateService.getState(phoneNumber);
+
+    if (state.pendingState === 'awaiting_duplicate_confirmation') {
+      this.stateService.clearPendingState(phoneNumber);
+      return AR.TASK_DUPLICATE_CANCELLED;
+    }
 
     if (state.pendingState !== 'idle') {
       this.stateService.clearPendingState(phoneNumber);
@@ -554,11 +573,38 @@ export class ConversationService {
   // ────────────────────────────────────────────────────────────
 
   private async handleTaskCreate(
-    _phoneNumber: string,
+    phoneNumber: string,
     classified: ClassifiedIntent,
     context: ConversationContext,
   ): Promise<string> {
-    const result = await this.taskService.create(context.currentDate, classified.entities);
+    const { entities } = classified;
+
+    // Check if task title is provided
+    if (!entities.taskTitle) {
+      return 'لازم تحدد عنوان المهمة.';
+    }
+
+    // Check for similar tasks within a week
+    const similar = await this.taskService.findSimilarInWeek(
+      context.currentDate,
+      entities.taskTitle,
+    );
+
+    if (similar) {
+      // Found a similar task, ask for confirmation
+      const dayName = this.taskService.formatDate(similar.date);
+
+      this.stateService.setState(phoneNumber, {
+        pendingState: 'awaiting_duplicate_confirmation',
+        pendingReference: JSON.stringify(entities),
+        pendingAction: `إضافة مهمة "${entities.taskTitle}"`,
+      });
+
+      return AR.TASK_DUPLICATE_FOUND(similar.task.title, dayName);
+    }
+
+    // No duplicate, create directly
+    const result = await this.taskService.create(context.currentDate, entities);
     return result.message;
   }
 
@@ -712,6 +758,37 @@ export class ConversationService {
 
       const result = await this.taskService.shift(context.currentDate, taskId, resolved);
       return result.message;
+    }
+
+    if (state.pendingState === 'awaiting_duplicate_confirmation' && state.pendingReference) {
+      // Check if user confirmed or rejected
+      const normalizedText = text.trim().toLowerCase();
+      const confirmWords = ['نعم', 'اه', 'أيوه', 'ايوه', 'صح', 'اكيد', 'اضيف', 'ضيف', 'yes', 'ok'];
+      const rejectWords = ['لا', 'لأ', 'الغاء', 'الغي', 'no', 'cancel'];
+
+      const isConfirm = confirmWords.some((w) => normalizedText.includes(w));
+      const isReject = rejectWords.some((w) => normalizedText.includes(w));
+
+      if (isConfirm && !isReject) {
+        // User confirmed, create the task
+        try {
+          const entities = JSON.parse(state.pendingReference) as ExtractedEntities;
+          this.stateService.clearPendingState(phoneNumber);
+
+          const result = await this.taskService.create(context.currentDate, entities);
+          return result.message;
+        } catch {
+          this.stateService.clearPendingState(phoneNumber);
+          return AR.ERROR_GENERIC;
+        }
+      } else if (isReject && !isConfirm) {
+        // User rejected
+        this.stateService.clearPendingState(phoneNumber);
+        return AR.TASK_DUPLICATE_CANCELLED;
+      }
+
+      // Unclear response, ask again
+      return 'مش فاهم، عايز تضيف المهمة ولا لأ؟ قول نعم أو لا.';
     }
 
     return null;

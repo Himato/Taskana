@@ -162,41 +162,41 @@ describe('TaskService', () => {
 
   describe('shift', () => {
     it('should shift task to future date', async () => {
-      const newTask = { ...mockTask, id: 't-001', origin: '2026-02-16' };
+      const newTask = { ...mockTask, id: 't-001', origin: '2026-02-18' };
       mockPersistenceService.addTask.mockResolvedValue(newTask);
 
-      const result = await service.shift('2026-02-16', '1', '2026-02-17');
+      const result = await service.shift('2026-02-18', '1', '2026-02-20');
 
       expect(result.success).toBe(true);
       expect(result.message).toContain('تم نقل');
 
       // Should mark original as shifted
       expect(mockPersistenceService.updateTask).toHaveBeenCalledWith(
-        '2026-02-16',
+        '2026-02-18',
         't-001',
         expect.objectContaining({
           status: 'shifted',
-          shiftedTo: '2026-02-17',
+          shiftedTo: '2026-02-20',
         }),
       );
 
       // Should create new task in target date
       expect(mockPersistenceService.addTask).toHaveBeenCalledWith(
-        '2026-02-17',
+        '2026-02-20',
         expect.objectContaining({
           title: 'اشتري خضار',
-          origin: '2026-02-16',
+          origin: '2026-02-18',
         }),
       );
     });
 
     it('should shift with reason', async () => {
-      mockPersistenceService.addTask.mockResolvedValue({ ...mockTask, origin: '2026-02-16' });
+      mockPersistenceService.addTask.mockResolvedValue({ ...mockTask, origin: '2026-02-18' });
 
-      await service.shift('2026-02-16', '1', '2026-02-17', 'المكتب مقفول');
+      await service.shift('2026-02-18', '1', '2026-02-20', 'المكتب مقفول');
 
       expect(mockPersistenceService.updateTask).toHaveBeenCalledWith(
-        '2026-02-16',
+        '2026-02-18',
         't-001',
         expect.objectContaining({
           shiftReason: 'المكتب مقفول',
@@ -205,7 +205,7 @@ describe('TaskService', () => {
     });
 
     it('should return error when shifting to past date', async () => {
-      const result = await service.shift('2026-02-16', '1', '2026-02-15');
+      const result = await service.shift('2026-02-18', '1', '2026-02-15');
 
       expect(result.success).toBe(false);
       expect(result.error).toBe('Cannot shift to past date');
@@ -215,7 +215,7 @@ describe('TaskService', () => {
     it('should return error for completed task', async () => {
       mockPersistenceService.getTask.mockResolvedValue({ ...mockTask, status: 'done' });
 
-      const result = await service.shift('2026-02-16', '1', '2026-02-17');
+      const result = await service.shift('2026-02-18', '1', '2026-02-20');
 
       expect(result.success).toBe(false);
       expect(result.error).toBe('Cannot shift completed task');
@@ -224,7 +224,7 @@ describe('TaskService', () => {
     it('should return error for already shifted task', async () => {
       mockPersistenceService.getTask.mockResolvedValue({ ...mockTask, status: 'shifted' });
 
-      const result = await service.shift('2026-02-16', '1', '2026-02-17');
+      const result = await service.shift('2026-02-18', '1', '2026-02-20');
 
       expect(result.success).toBe(false);
       expect(result.error).toBe('Task already shifted');
@@ -303,6 +303,122 @@ describe('TaskService', () => {
     it('should normalize task ID', async () => {
       await service.getById('2026-02-16', 't-1');
       expect(mockPersistenceService.getTask).toHaveBeenCalledWith('2026-02-16', 't-001');
+    });
+  });
+
+  describe('findSimilarInWeek', () => {
+    it('should find similar task within week', async () => {
+      // Return task with exact same title on one of the days (similarity = 1.0)
+      mockPersistenceService.getDay.mockImplementation(async (date: string) => {
+        if (date === '2026-02-19') {
+          return {
+            date: '2026-02-19',
+            habits: [],
+            tasks: [
+              {
+                id: 't-001',
+                title: 'اشتري خضار',
+                islamicTimeSlot: 'after_dhuhr',
+                status: 'pending',
+                completedAt: null,
+                createdAt: '2026-02-19T10:00:00.000Z',
+                images: [],
+              },
+            ],
+            nextTaskId: 2,
+          };
+        }
+        return { date, habits: [], tasks: [], nextTaskId: 1 };
+      });
+
+      const result = await service.findSimilarInWeek('2026-02-18', 'اشتري خضار');
+
+      expect(result).not.toBeNull();
+      expect(result?.task.title).toBe('اشتري خضار');
+      expect(result?.similarity).toBe(1.0);
+    });
+
+    it('should return null when no similar task found', async () => {
+      mockPersistenceService.getDay.mockResolvedValue({
+        date: '2026-02-18',
+        habits: [],
+        tasks: [
+          {
+            id: 't-001',
+            title: 'اذهب للطبيب',
+            islamicTimeSlot: 'after_dhuhr',
+            status: 'pending',
+            completedAt: null,
+            createdAt: '2026-02-18T10:00:00.000Z',
+            images: [],
+          },
+        ],
+        nextTaskId: 2,
+      });
+
+      const result = await service.findSimilarInWeek('2026-02-18', 'اشتري خضار');
+
+      expect(result).toBeNull();
+    });
+
+    it('should skip shifted tasks', async () => {
+      mockPersistenceService.getDay.mockResolvedValue({
+        date: '2026-02-18',
+        habits: [],
+        tasks: [
+          {
+            id: 't-001',
+            title: 'اشتري خضار',
+            islamicTimeSlot: 'after_dhuhr',
+            status: 'shifted',
+            completedAt: null,
+            createdAt: '2026-02-18T10:00:00.000Z',
+            images: [],
+          },
+        ],
+        nextTaskId: 2,
+      });
+
+      const result = await service.findSimilarInWeek('2026-02-18', 'اشتري خضار');
+
+      expect(result).toBeNull();
+    });
+
+    it('should skip completed tasks', async () => {
+      mockPersistenceService.getDay.mockResolvedValue({
+        date: '2026-02-18',
+        habits: [],
+        tasks: [
+          {
+            id: 't-001',
+            title: 'اشتري خضار',
+            islamicTimeSlot: 'after_dhuhr',
+            status: 'done',
+            completedAt: '2026-02-18T12:00:00.000Z',
+            createdAt: '2026-02-18T10:00:00.000Z',
+            images: [],
+          },
+        ],
+        nextTaskId: 2,
+      });
+
+      const result = await service.findSimilarInWeek('2026-02-18', 'اشتري خضار');
+
+      expect(result).toBeNull();
+    });
+  });
+
+  describe('formatDate', () => {
+    it('should return النهارده for today', () => {
+      const today = new Date().toISOString().split('T')[0];
+      expect(service.formatDate(today)).toBe('النهارده');
+    });
+
+    it('should return بكرة for tomorrow', () => {
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const tomorrowStr = tomorrow.toISOString().split('T')[0];
+      expect(service.formatDate(tomorrowStr)).toBe('بكرة');
     });
   });
 });

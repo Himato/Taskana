@@ -113,6 +113,7 @@ export type PendingState =
   | 'awaiting_justification'
   | 'awaiting_shift_date'
   | 'awaiting_confirmation'
+  | 'awaiting_duplicate_confirmation'
   | 'awaiting_image_tag';
 
 /**
